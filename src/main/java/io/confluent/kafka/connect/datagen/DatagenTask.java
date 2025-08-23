@@ -59,6 +59,7 @@ public class DatagenTask extends SourceTask {
   private Map<String, Object> sourcePartition;
   private long taskGeneration;
   private final Random random = new Random();
+  private AvroGenerator avroGenerator;
 
   @Override
   public String version() {
@@ -95,14 +96,7 @@ public class DatagenTask extends SourceTask {
 
     avroSchema = config.getSchema();
 
-    Generator.Builder generatorBuilder = new Generator.Builder()
-        .random(random)
-        .generation(count)
-        .schema(avroSchema);
-
-    generator = generatorBuilder.build();
-    avroData = new AvroData(1);
-    ksqlSchema = avroData.toConnectSchema(avroSchema);
+    avroGenerator = new AvroGenerator(avroSchema, random, count, config);
   }
 
   @Override
@@ -117,27 +111,7 @@ public class DatagenTask extends SourceTask {
       }
     }
 
-    final Object generatedObject = generator.generate();
-    if (!(generatedObject instanceof GenericRecord)) {
-      throw new RuntimeException(String.format(
-          "Expected Avro Random Generator to return instance of GenericRecord, found %s instead",
-          generatedObject.getClass().getName()
-      ));
-    }
-    final GenericRecord randomAvroMessage = (GenericRecord) generatedObject;
-
-    // Key
-    SchemaAndValue key = new SchemaAndValue(DEFAULT_KEY_SCHEMA, null);
-    if (!schemaKeyField.isEmpty()) {
-      key = avroData.toConnectData(
-          randomAvroMessage.getSchema().getField(schemaKeyField).schema(),
-          randomAvroMessage.get(schemaKeyField)
-      );
-    }
-
-    // Value
-    final org.apache.kafka.connect.data.Schema messageSchema = avroData.toConnectSchema(avroSchema);
-    final Object messageValue = avroData.toConnectData(avroSchema, randomAvroMessage).value();
+    Message message = avroGenerator.generate();
 
     if (maxRecords > 0 && count >= maxRecords) {
       throw new ConnectException(
@@ -170,10 +144,10 @@ public class DatagenTask extends SourceTask {
         sourceOffset,
         topic,
         null,
-        key.schema(),
-        key.value(),
-        messageSchema,
-        messageValue,
+        message.getKey().schema(),
+        message.getKey().value(),
+        message.getValue().schema(),
+        message.getValue().value(),
         null,
         headers
     );

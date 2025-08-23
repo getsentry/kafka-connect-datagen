@@ -17,15 +17,17 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>io.confluent</groupId>
+    <!-- Parent POM that provides common build configuration and dependency management -->
+    <!-- <parent>
+        <groupId>io.sentry</groupId>
         <artifactId>common-parent</artifactId>
         <version>7.9.0-610</version>
-    </parent>
+    </parent> -->
 
-    <groupId>io.confluent.kafka.connect</groupId>
+    <!-- Project configuration -->
+    <groupId>io.sentry.kafka.connect</groupId>
     <artifactId>kafka-connect-datagen</artifactId>
-    <version>0.7.0-SNAPSHOT</version>
+    <version>0.0.1-SNAPSHOT</version> 
     <packaging>jar</packaging>
 
 
@@ -42,6 +44,12 @@
         <dependency.check.version>6.1.6</dependency.check.version>
         <hamcrest.version>2.2</hamcrest.version>
         <snappy.java.version>1.1.10.5</snappy.java.version>
+        <!-- Added versions for dependencies that were previously managed by parent POM -->
+        <kafka.version>3.6.1</kafka.version>
+        <confluent.version>7.5.1</confluent.version>
+        <junit.jupiter.version>5.9.3</junit.jupiter.version>
+        <slf4j.version>2.0.9</slf4j.version>
+        <httpclient.version>4.5.14</httpclient.version>
     </properties>
 
     <name>kafka-connect-datagen</name>
@@ -125,12 +133,13 @@
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>connect-api</artifactId>
+            <version>${kafka.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>io.confluent</groupId>
             <artifactId>kafka-connect-avro-data</artifactId>
-            <version>${confluent.version.range}</version>
+            <version>${confluent.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.zookeeper</groupId>
@@ -150,6 +159,7 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
+            <version>${junit.jupiter.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -167,6 +177,7 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-reload4j</artifactId>
+            <version>${slf4j.version}</version>
             <scope>test</scope>
         </dependency>
         <!-- pinning for CVEs -->
