@@ -17,8 +17,8 @@ public class AvroGenerator implements MessageGenerator {
     private AvroData avroData;
     private static final Schema DEFAULT_KEY_SCHEMA = Schema.OPTIONAL_STRING_SCHEMA;
 
-    public AvroGenerator(org.apache.avro.Schema schema, Random random, long count, DatagenConnectorConfig config) {
-        this.schema = schema;
+    public AvroGenerator(Random random, long count, DatagenConnectorConfig config) {
+        schema = config.getAvroSchema();
 
         Generator.Builder generatorBuilder = new Generator.Builder()
         .random(random)

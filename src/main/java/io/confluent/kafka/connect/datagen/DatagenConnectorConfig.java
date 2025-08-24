@@ -137,7 +137,7 @@ public class DatagenConnectorConfig extends AbstractConfig {
     return this.getString(GENERATOR_TYPE_CONF);
   }
 
-  public Schema getSchema() {
+  public Schema getAvroSchema() {
     String quickstart = getQuickstart();
     if (quickstart != null && !quickstart.isEmpty()) {
       String schemaFilename = Quickstart.valueOf(quickstart.toUpperCase()).getSchemaFilename();
@@ -152,6 +152,13 @@ public class DatagenConnectorConfig extends AbstractConfig {
       return ConfigUtils.getSchemaFromSchemaFileName(schemaFileName);
     }
     return null;
+  }
+
+  public String getJsonSchema() {
+    assert getGeneratorType().equals("jsonschema");
+    String schemaFileName = getSchemaFilename();
+    assert schemaFileName != null;
+    return ConfigUtils.getJsonSchemaFromFileName(schemaFileName);
   }
 
   public static List<String> schemaSourceKeys() {

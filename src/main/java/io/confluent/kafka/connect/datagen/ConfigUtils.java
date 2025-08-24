@@ -66,4 +66,26 @@ public class ConfigUtils {
     }
     return schema;
   }
+
+  public static String getJsonSchemaFromFileName(String schemaFileName) {
+    try (InputStream stream = new FileInputStream(schemaFileName)) {
+      return new String(stream.readAllBytes());
+    } catch (FileNotFoundException fe) {
+      try {
+        if (DatagenTask.class.getClassLoader()
+            .getResource(schemaFileName) == null) {
+          throw new ConfigException("Unable to find the schema file");
+        }
+        return new String(
+          DatagenTask.class.getClassLoader().getResourceAsStream(schemaFileName).readAllBytes()
+        );
+      } catch (IOException ioe) {
+        log.error("Unable to parse the provided schema", ioe);
+        throw new ConfigException("Unable to parse the provided schema");
+      }
+    } catch (IOException ioe) {
+      log.error("Unable to parse the provided schema", ioe);
+      throw new ConfigException("Unable to parse the provided schema");
+    }
+  }
 }

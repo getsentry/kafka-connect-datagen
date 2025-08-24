@@ -86,14 +86,14 @@ public class DatagenTask extends SourceTask {
       random.setSeed((Long) offset.get(RANDOM_SEED));
     }
 
-    avroSchema = config.getSchema();
+    
 
     if (config.getGeneratorType().equals("avro")) {
       log.info("Using Avro generator");
-      messageGenerator = new AvroGenerator(avroSchema, random, count, config);
+      messageGenerator = new AvroGenerator(random, count, config);
     } else if (config.getGeneratorType().equals("jsonschema")) {
       log.info("Using JSON schema generator");
-      messageGenerator = new JsonSchemaGenerator();
+      messageGenerator = new JsonSchemaGenerator(config);
     } else {
       throw new ConnectException("Invalid generator type: " + config.getGeneratorType());
     }
