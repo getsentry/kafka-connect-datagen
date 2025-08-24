@@ -48,6 +48,8 @@ public class DatagenConnectorConfig extends AbstractConfig {
   private static final String RANDOM_SEED_DOC = "Numeric seed for generating random data. "
       + "Two connectors started with the same seed will deterministically produce the same data. "
       + "Each task will generate different data than the other tasks in the same connector.";
+  private static final String GENERATOR_TYPE_CONF = "generator.type";
+  private static final String GENERATOR_TYPE_DOC = "Which generator to use: jsonschema or avro";
 
   public DatagenConnectorConfig(ConfigDef config, Map<String, String> parsedConfig) {
     super(config, parsedConfig);
@@ -89,7 +91,8 @@ public class DatagenConnectorConfig extends AbstractConfig {
           Importance.HIGH,
           QUICKSTART_DOC
         )
-        .define(RANDOM_SEED_CONF, Type.LONG, null, Importance.LOW, RANDOM_SEED_DOC);
+        .define(RANDOM_SEED_CONF, Type.LONG, null, Importance.LOW, RANDOM_SEED_DOC)
+        .define(GENERATOR_TYPE_CONF, Type.STRING, "avro", Importance.HIGH, GENERATOR_TYPE_DOC);
   }
 
   public String getKafkaTopic() {
@@ -130,6 +133,10 @@ public class DatagenConnectorConfig extends AbstractConfig {
     return this.getString(SCHEMA_STRING_CONF);
   }
 
+  public String getGeneratorType() {
+    return this.getString(GENERATOR_TYPE_CONF);
+  }
+
   public Schema getSchema() {
     String quickstart = getQuickstart();
     if (quickstart != null && !quickstart.isEmpty()) {
@@ -154,6 +161,7 @@ public class DatagenConnectorConfig extends AbstractConfig {
   public static boolean isExplicitlySetSchemaSource(String key, Object value) {
     return schemaSourceKeys().contains(key) && !("".equals(value));
   }
+
 
   private static class QuickstartValidator implements Validator {
 

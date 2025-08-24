@@ -15,6 +15,7 @@ public class AvroGenerator implements MessageGenerator {
     private Generator generator;
     private String schemaKeyField;
     private AvroData avroData;
+    private static final Schema DEFAULT_KEY_SCHEMA = Schema.OPTIONAL_STRING_SCHEMA;
 
     public AvroGenerator(org.apache.avro.Schema schema, Random random, long count, DatagenConnectorConfig config) {
         this.schema = schema;
@@ -41,7 +42,7 @@ public class AvroGenerator implements MessageGenerator {
         final GenericRecord randomAvroMessage = (GenericRecord) generatedObject;
 
         // Key
-        SchemaAndValue key = new SchemaAndValue(Schema.OPTIONAL_STRING_SCHEMA, null);
+        SchemaAndValue key = new SchemaAndValue(DEFAULT_KEY_SCHEMA, null);
         if (!schemaKeyField.isEmpty()) {
             key = avroData.toConnectData(
                 randomAvroMessage.getSchema().getField(schemaKeyField).schema(),
@@ -53,6 +54,7 @@ public class AvroGenerator implements MessageGenerator {
         final org.apache.kafka.connect.data.Schema messageSchema = avroData.toConnectSchema(schema);
         final Object messageValue = avroData.toConnectData(schema, randomAvroMessage).value();
 
-        return new Message(key, new SchemaAndValue(messageSchema, messageValue));
+        SchemaAndValue value = new SchemaAndValue(messageSchema, messageValue);
+        return new Message(key, value);
     }
 }

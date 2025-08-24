@@ -24,9 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.header.ConnectHeaders;
 import org.apache.kafka.connect.source.SourceRecord;
@@ -38,7 +36,6 @@ public class DatagenTask extends SourceTask {
 
   static final Logger log = LoggerFactory.getLogger(DatagenTask.class);
 
-  private static final Schema DEFAULT_KEY_SCHEMA = Schema.OPTIONAL_STRING_SCHEMA;
   public static final String TASK_ID = "task.id";
   public static final String TASK_GENERATION = "task.generation";
   public static final String CURRENT_ITERATION = "current.iteration";
@@ -50,16 +47,12 @@ public class DatagenTask extends SourceTask {
   private long maxInterval;
   private int maxRecords;
   private long count = 0L;
-  private String schemaKeyField;
-  private Generator generator;
   private org.apache.avro.Schema avroSchema;
-  private org.apache.kafka.connect.data.Schema ksqlSchema;
-  private AvroData avroData;
   private int taskId;
   private Map<String, Object> sourcePartition;
   private long taskGeneration;
   private final Random random = new Random();
-  private AvroGenerator avroGenerator;
+  private MessageGenerator messageGenerator;
 
   @Override
   public String version() {
@@ -72,7 +65,6 @@ public class DatagenTask extends SourceTask {
     topic = config.getKafkaTopic();
     maxInterval = config.getMaxInterval();
     maxRecords = config.getIterations();
-    schemaKeyField = config.getSchemaKeyfield();
     taskGeneration = 0;
     taskId = Integer.parseInt(props.get(TASK_ID));
     sourcePartition = Collections.singletonMap(TASK_ID, taskId);
@@ -96,7 +88,16 @@ public class DatagenTask extends SourceTask {
 
     avroSchema = config.getSchema();
 
-    avroGenerator = new AvroGenerator(avroSchema, random, count, config);
+    if (config.getGeneratorType().equals("avro")) {
+      log.info("Using Avro generator");
+      messageGenerator = new AvroGenerator(avroSchema, random, count, config);
+    } else if (config.getGeneratorType().equals("jsonschema")) {
+      log.info("Using JSON schema generator");
+      messageGenerator = new JsonSchemaGenerator();
+    } else {
+      throw new ConnectException("Invalid generator type: " + config.getGeneratorType());
+    }
+    
   }
 
   @Override
@@ -111,7 +112,7 @@ public class DatagenTask extends SourceTask {
       }
     }
 
-    Message message = avroGenerator.generate();
+    Message message = messageGenerator.generate();
 
     if (maxRecords > 0 && count >= maxRecords) {
       throw new ConnectException(
@@ -151,6 +152,7 @@ public class DatagenTask extends SourceTask {
         null,
         headers
     );
+
     records.add(record);
     count += records.size();
     return records;
