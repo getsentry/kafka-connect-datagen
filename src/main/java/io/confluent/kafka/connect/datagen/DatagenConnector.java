@@ -93,7 +93,9 @@ public class DatagenConnector extends SourceConnector {
     }
 
     if (isSingleSchemaSource) {
-      validateSchemaKeyField(config, this.config.getSchema());
+      if (this.config.getGeneratorType().equals("avro")) {
+        validateSchemaKeyField(config, this.config.getAvroSchema());
+      } 
     }
     return config;
   }

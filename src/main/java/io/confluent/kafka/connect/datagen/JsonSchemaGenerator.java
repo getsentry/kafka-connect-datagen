@@ -22,13 +22,14 @@ public class JsonSchemaGenerator implements MessageGenerator {
     private final Generator generator;
     private final Random random;
     private net.jimblackler.jsonschemafriend.Schema schema;
-    private int counter = 0;
+    private final String schemaKeyField;
     
     public JsonSchemaGenerator(DatagenConnectorConfig config) {
         this.objectMapper = new ObjectMapper();
         this.random = new Random();
         this.schemaStore = new SchemaStore(true);
-        
+
+        this.schemaKeyField = config.getSchemaKeyfield();
         try {
             
             // Load the schema from the JSON schema string
@@ -58,13 +59,21 @@ public class JsonSchemaGenerator implements MessageGenerator {
             // Convert the generated JSON to Schema and Value
             SchemaAndValue valueSchemaAndValue = convertJsonNodeToSchemaAndValue(jsonNode);
             
-            // For now, using a simple string key as mentioned in the requirements
-            SchemaAndValue keySchemaAndValue = new SchemaAndValue(
-                Schema.STRING_SCHEMA, "user_" + counter
-            );
+            SchemaAndValue key = new SchemaAndValue(Schema.OPTIONAL_STRING_SCHEMA, null);
+            if (!schemaKeyField.isEmpty()) {
+                JsonNode keyNode = jsonNode.get(schemaKeyField);
+                if (keyNode.isInt()) {
+                    key = new SchemaAndValue(Schema.INT32_SCHEMA, keyNode.asInt());
+                } else if (keyNode.isLong()) {
+                    key = new SchemaAndValue(Schema.INT64_SCHEMA, keyNode.asLong());
+                } else if (keyNode.isTextual()) {
+                    key = new SchemaAndValue(Schema.STRING_SCHEMA, keyNode.asText());
+                } else {
+                    throw new IllegalArgumentException("Schema key field must be a string, int, or long");
+                }
+            }
             
-            counter++;
-            return new Message(keySchemaAndValue, valueSchemaAndValue);
+            return new Message(key, valueSchemaAndValue);
             
         } catch (Exception e) {
             throw new RuntimeException("Failed to generate JSON message", e);

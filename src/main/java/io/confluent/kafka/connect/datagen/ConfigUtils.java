@@ -80,11 +80,11 @@ public class ConfigUtils {
           DatagenTask.class.getClassLoader().getResourceAsStream(schemaFileName).readAllBytes()
         );
       } catch (IOException ioe) {
-        log.error("Unable to parse the provided schema", ioe);
+        log.error("Unable to load the provided schema", ioe);
         throw new ConfigException("Unable to parse the provided schema");
       }
     } catch (IOException ioe) {
-      log.error("Unable to parse the provided schema", ioe);
+      log.error("Unable to load the provided schema", ioe);
       throw new ConfigException("Unable to parse the provided schema");
     }
   }
