@@ -40,6 +40,8 @@ public class DatagenConnectorConfig extends AbstractConfig {
   private static final String SCHEMA_STRING_DOC = "The literal JSON-encoded Avro schema to use";
   public static final String SCHEMA_FILENAME_CONF = "schema.filename";
   private static final String SCHEMA_FILENAME_DOC = "Filename of schema to use";
+  public static final String JSON_SCHEMA_FILENAME_CONF = "jsonschema.filename";
+  private static final String JSON_SCHEMA_FILENAME_DOC = "Filename of JSON schema to use";
   public static final String SCHEMA_KEYFIELD_CONF = "schema.keyfield";
   private static final String SCHEMA_KEYFIELD_DOC = "Name of field to use as the message key";
   public static final String QUICKSTART_CONF = "quickstart";
@@ -48,7 +50,7 @@ public class DatagenConnectorConfig extends AbstractConfig {
   private static final String RANDOM_SEED_DOC = "Numeric seed for generating random data. "
       + "Two connectors started with the same seed will deterministically produce the same data. "
       + "Each task will generate different data than the other tasks in the same connector.";
-  private static final String GENERATOR_TYPE_CONF = "generator.type";
+  public static final String GENERATOR_TYPE_CONF = "generator.type";
   private static final String GENERATOR_TYPE_DOC = "Which generator to use: jsonschema or avro";
 
   public DatagenConnectorConfig(ConfigDef config, Map<String, String> parsedConfig) {
@@ -77,6 +79,13 @@ public class DatagenConnectorConfig extends AbstractConfig {
           new SchemaFileValidator(),
           Importance.HIGH,
           SCHEMA_FILENAME_DOC
+        )
+        .define(JSON_SCHEMA_FILENAME_CONF,
+          Type.STRING,
+          "",
+          new JsonSchemaFileValidator(),
+          Importance.HIGH,
+          JSON_SCHEMA_FILENAME_DOC
         )
         .define(SCHEMA_KEYFIELD_CONF,
           Type.STRING,
@@ -111,6 +120,10 @@ public class DatagenConnectorConfig extends AbstractConfig {
     return this.getString(SCHEMA_FILENAME_CONF);
   }
 
+  public String getJsonSchemaFilename() {
+    return this.getString(JSON_SCHEMA_FILENAME_CONF);
+  }
+
   public String getSchemaKeyfield() {
     if (this.getString(SCHEMA_KEYFIELD_CONF).isEmpty()) {
       String quickstart = this.getString(QUICKSTART_CONF);
@@ -137,7 +150,7 @@ public class DatagenConnectorConfig extends AbstractConfig {
     return this.getString(GENERATOR_TYPE_CONF);
   }
 
-  public Schema getSchema() {
+  public Schema getAvroSchema() {
     String quickstart = getQuickstart();
     if (quickstart != null && !quickstart.isEmpty()) {
       String schemaFilename = Quickstart.valueOf(quickstart.toUpperCase()).getSchemaFilename();
@@ -154,8 +167,16 @@ public class DatagenConnectorConfig extends AbstractConfig {
     return null;
   }
 
+  public String getJsonSchema() {
+    assert getGeneratorType().equals("jsonschema");
+    String schemaFileName = getJsonSchemaFilename();
+    assert schemaFileName != null;
+    String jsonSchema = ConfigUtils.getJsonSchemaFromFileName(schemaFileName);
+    return jsonSchema;
+  }
+
   public static List<String> schemaSourceKeys() {
-    return ImmutableList.of(SCHEMA_STRING_CONF, SCHEMA_FILENAME_CONF, QUICKSTART_CONF);
+    return ImmutableList.of(SCHEMA_STRING_CONF, SCHEMA_FILENAME_CONF, QUICKSTART_CONF, JSON_SCHEMA_FILENAME_CONF);
   }
 
   public static boolean isExplicitlySetSchemaSource(String key, Object value) {
@@ -199,6 +220,17 @@ public class DatagenConnectorConfig extends AbstractConfig {
         return;
       }
       ConfigUtils.getSchemaFromSchemaFileName((String) value);
+    }
+  }
+
+  private static class JsonSchemaFileValidator implements Validator {
+
+    @Override
+    public void ensureValid(String name, Object value) {
+      if (((String) value).isEmpty()) {
+        return;
+      }
+      ConfigUtils.getJsonSchemaFromFileName((String) value);
     }
   }
 }

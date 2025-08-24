@@ -17,41 +17,31 @@ import java.util.Random;
 
 public class JsonSchemaGenerator implements MessageGenerator {
     
-    // Hardcoded JSON schema example - a user profile schema
-    private static final String JSON_SCHEMA_STRING = 
-        "{\"type\": \"object\", \"properties\": {" +
-        "\"id\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 999999}," +
-        "\"name\": {\"type\": \"string\", \"minLength\": 3, \"maxLength\": 50}," +
-        "\"email\": {\"type\": \"string\"}," +
-        "\"age\": {\"type\": \"integer\", \"minimum\": 18, \"maximum\": 100}," +
-        "\"active\": {\"type\": \"boolean\"}," +
-        "\"score\": {\"type\": \"number\", \"minimum\": 0.0, \"maximum\": 100.0}," +
-        "\"timestamp\": {\"type\": \"integer\", \"minimum\": 1640995200000, \"maximum\": 1735689600000}" +
-        "}, \"required\": [\"id\", \"name\", \"email\", \"age\", \"active\", \"score\", \"timestamp\"]}";
-    
     private final ObjectMapper objectMapper;
     private final SchemaStore schemaStore;
     private final Generator generator;
     private final Random random;
     private net.jimblackler.jsonschemafriend.Schema schema;
-    private int counter = 0;
+    private final String schemaKeyField;
     
-    public JsonSchemaGenerator() {
+    public JsonSchemaGenerator(DatagenConnectorConfig config) {
         this.objectMapper = new ObjectMapper();
         this.random = new Random();
         this.schemaStore = new SchemaStore(true);
-        
+
+        this.schemaKeyField = config.getSchemaKeyfield();
         try {
+            
             // Load the schema from the JSON schema string
-            schema = schemaStore.loadSchemaJson(JSON_SCHEMA_STRING);
+            schema = schemaStore.loadSchemaJson(config.getJsonSchema());
             
             // Configure the generator
-            Configuration config = DefaultConfig.build()
+            Configuration jsonConfig = DefaultConfig.build()
                 .setGenerateMinimal(false)
                 .setNonRequiredPropertyChance(1.0f)  // Always generate all properties
                 .get();
             
-            this.generator = new Generator(config, schemaStore, random);
+            this.generator = new Generator(jsonConfig, schemaStore, random);
         } catch (Exception e) {
             throw new RuntimeException("Failed to initialize JsonSchemaGenerator", e);
         }
@@ -69,13 +59,21 @@ public class JsonSchemaGenerator implements MessageGenerator {
             // Convert the generated JSON to Schema and Value
             SchemaAndValue valueSchemaAndValue = convertJsonNodeToSchemaAndValue(jsonNode);
             
-            // For now, using a simple string key as mentioned in the requirements
-            SchemaAndValue keySchemaAndValue = new SchemaAndValue(
-                Schema.STRING_SCHEMA, "user_" + counter
-            );
+            SchemaAndValue key = new SchemaAndValue(Schema.OPTIONAL_STRING_SCHEMA, null);
+            if (!schemaKeyField.isEmpty()) {
+                JsonNode keyNode = jsonNode.get(schemaKeyField);
+                if (keyNode.isInt()) {
+                    key = new SchemaAndValue(Schema.INT32_SCHEMA, keyNode.asInt());
+                } else if (keyNode.isLong()) {
+                    key = new SchemaAndValue(Schema.INT64_SCHEMA, keyNode.asLong());
+                } else if (keyNode.isTextual()) {
+                    key = new SchemaAndValue(Schema.STRING_SCHEMA, keyNode.asText());
+                } else {
+                    throw new IllegalArgumentException("Schema key field must be a string, int, or long");
+                }
+            }
             
-            counter++;
-            return new Message(keySchemaAndValue, valueSchemaAndValue);
+            return new Message(key, valueSchemaAndValue);
             
         } catch (Exception e) {
             throw new RuntimeException("Failed to generate JSON message", e);
