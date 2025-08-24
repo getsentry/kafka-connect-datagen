@@ -6,38 +6,74 @@ import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.data.SchemaAndValue;
+import net.jimblackler.jsongenerator.Configuration;
+import net.jimblackler.jsongenerator.DefaultConfig;
+import net.jimblackler.jsongenerator.Generator;
+import net.jimblackler.jsonschemafriend.SchemaStore;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Random;
 
 public class JsonSchemaGenerator implements MessageGenerator {
     
-    private static final String JSON_DOCUMENT = 
-        "{\"id\": 12345, \"name\": \"Sample User\", \"timestamp\": 1640995200000}";
-    
-    private static final String JSON_KEY = 
-        "{\"userId\": 12345}";
+    // Hardcoded JSON schema example - a user profile schema
+    private static final String JSON_SCHEMA_STRING = 
+        "{\"type\": \"object\", \"properties\": {" +
+        "\"id\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 999999}," +
+        "\"name\": {\"type\": \"string\", \"minLength\": 3, \"maxLength\": 50}," +
+        "\"email\": {\"type\": \"string\", \"format\": \"email\"}," +
+        "\"age\": {\"type\": \"integer\", \"minimum\": 18, \"maximum\": 100}," +
+        "\"active\": {\"type\": \"boolean\"}," +
+        "\"score\": {\"type\": \"number\", \"minimum\": 0.0, \"maximum\": 100.0}," +
+        "\"timestamp\": {\"type\": \"integer\", \"minimum\": 1640995200000, \"maximum\": 1735689600000}" +
+        "}, \"required\": [\"id\", \"name\", \"email\", \"age\", \"active\", \"score\", \"timestamp\"]}";
     
     private final ObjectMapper objectMapper;
-    private int counter = 0;    
+    private final SchemaStore schemaStore;
+    private final Generator generator;
+    private final Random random;
+    private int counter = 0;
     
     public JsonSchemaGenerator() {
         this.objectMapper = new ObjectMapper();
+        this.random = new Random();
+        this.schemaStore = new SchemaStore(true);
+        
+        try {
+            // Load the schema from the JSON schema string
+            net.jimblackler.jsonschemafriend.Schema schema = schemaStore.loadSchemaJson(JSON_SCHEMA_STRING);
+            
+            // Configure the generator
+            Configuration config = DefaultConfig.build()
+                .setGenerateMinimal(false)
+                .setNonRequiredPropertyChance(1.0f)  // Always generate all properties
+                .get();
+            
+            this.generator = new Generator(config, schemaStore, random);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to initialize JsonSchemaGenerator", e);
+        }
     }
     
     @Override
     public Message generate() {
         try {
-            // Parse the JSON string into JsonNode
-            JsonNode jsonNode = objectMapper.readTree(JSON_DOCUMENT);
-            JsonNode keyNode = objectMapper.readTree(JSON_KEY);
+            // Generate a random JSON document from the schema using jsonschemafriend
+            Object generatedJson = generator.generate(schemaStore.loadSchemaJson(JSON_SCHEMA_STRING), 1);
             
-            // Convert JSON to Schema and Value manually
+            // Convert the generated object to a JsonNode for easier processing
+            JsonNode jsonNode = objectMapper.valueToTree(generatedJson);
+            
+            // Convert the generated JSON to Schema and Value
             SchemaAndValue valueSchemaAndValue = convertJsonNodeToSchemaAndValue(jsonNode);
+            
+            // For now, using a simple string key as mentioned in the requirements
             SchemaAndValue keySchemaAndValue = new SchemaAndValue(
-                Schema.STRING_SCHEMA, "Sample User" + counter
+                Schema.STRING_SCHEMA, "user_" + counter
             );
             
+            counter++;
             return new Message(keySchemaAndValue, valueSchemaAndValue);
             
         } catch (Exception e) {
@@ -68,7 +104,6 @@ public class JsonSchemaGenerator implements MessageGenerator {
                     schemaBuilder.field(fieldName, Schema.FLOAT64_SCHEMA);
                 }
             }
-            schemaBuilder.field("counter", Schema.INT32_SCHEMA);    
             
             // Build the final schema
             Schema schema = schemaBuilder.build();
@@ -94,8 +129,6 @@ public class JsonSchemaGenerator implements MessageGenerator {
                 }
             }
             
-            counter++;
-            struct.put("counter", counter);
             return new SchemaAndValue(schema, struct);
         }
         
