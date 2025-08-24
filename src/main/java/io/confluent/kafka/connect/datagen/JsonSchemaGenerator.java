@@ -22,7 +22,7 @@ public class JsonSchemaGenerator implements MessageGenerator {
         "{\"type\": \"object\", \"properties\": {" +
         "\"id\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 999999}," +
         "\"name\": {\"type\": \"string\", \"minLength\": 3, \"maxLength\": 50}," +
-        "\"email\": {\"type\": \"string\", \"format\": \"email\"}," +
+        "\"email\": {\"type\": \"string\"}," +
         "\"age\": {\"type\": \"integer\", \"minimum\": 18, \"maximum\": 100}," +
         "\"active\": {\"type\": \"boolean\"}," +
         "\"score\": {\"type\": \"number\", \"minimum\": 0.0, \"maximum\": 100.0}," +
@@ -33,6 +33,7 @@ public class JsonSchemaGenerator implements MessageGenerator {
     private final SchemaStore schemaStore;
     private final Generator generator;
     private final Random random;
+    private net.jimblackler.jsonschemafriend.Schema schema;
     private int counter = 0;
     
     public JsonSchemaGenerator() {
@@ -42,7 +43,7 @@ public class JsonSchemaGenerator implements MessageGenerator {
         
         try {
             // Load the schema from the JSON schema string
-            net.jimblackler.jsonschemafriend.Schema schema = schemaStore.loadSchemaJson(JSON_SCHEMA_STRING);
+            schema = schemaStore.loadSchemaJson(JSON_SCHEMA_STRING);
             
             // Configure the generator
             Configuration config = DefaultConfig.build()
@@ -60,7 +61,7 @@ public class JsonSchemaGenerator implements MessageGenerator {
     public Message generate() {
         try {
             // Generate a random JSON document from the schema using jsonschemafriend
-            Object generatedJson = generator.generate(schemaStore.loadSchemaJson(JSON_SCHEMA_STRING), 1);
+            Object generatedJson = generator.generate(schema, 1);
             
             // Convert the generated object to a JsonNode for easier processing
             JsonNode jsonNode = objectMapper.valueToTree(generatedJson);

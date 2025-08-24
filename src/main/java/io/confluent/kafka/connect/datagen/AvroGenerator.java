@@ -55,6 +55,7 @@ public class AvroGenerator implements MessageGenerator {
         final Object messageValue = avroData.toConnectData(schema, randomAvroMessage).value();
 
         SchemaAndValue value = new SchemaAndValue(messageSchema, messageValue);
+            
         return new Message(key, value);
     }
 }
